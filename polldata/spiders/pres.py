@@ -4,6 +4,8 @@ from scrapy.selector import HtmlXPathSelector
 from scrapy.item import Item
 from scrapy import log
 
+from polldata.items import PresPollItem
+
 class PresSpider(CrawlSpider):
     name = "pres2012"
     allowed_domains = ["realclearpolitics.com"]
@@ -23,6 +25,7 @@ class PresSpider(CrawlSpider):
                 allow_domains=('realclearpolitics.com',),
             ),
             callback='parseStatePolls',
+            # follow=None, # default 
             process_links='processLinks',
             process_request='processRequest',
         ),
@@ -30,13 +33,33 @@ class PresSpider(CrawlSpider):
 
 
     def parseStatePolls(self, response):
-        self.log('Hi, this is an item page! %s' % response.url, level=log.DEBUG)
-        pass
+        items = []
+        hxs = HtmlXPathSelector(response)
+        polls = hxs.select('//*[@id="polling-data-full"]/table/tr[not(@class) or @class="isInRcpAvg"]')
+
+        for poll in polls:
+            polldata = poll.select('td/text() | td/a/text()')
+
+            item = PresPollItem()
+            item['service'] = polldata[0].extract()
+            item['start']   = polldata[1].extract()
+            item['end']     = polldata[1].extract()
+            # TODO: split text into seperate start / end dates
+            #       currently each has 8/11 - 8/17
+            item['sample']  = polldata[2].extract()
+            item['dem']     = polldata[3].extract()
+            item['rep']     = polldata[4].extract()
+            # item['ind']     = polldata[0].extract()
+            # Calculating ind
+            #   * ind = polldata[5] (use if it exists)?
+            #   * ind = 100 - dem - rep?
+            items.append(item)
+
+        return items
 
     # filters out repeat state poll links
     # ie only get new polls from Ohio once
     def processLinks(self, links):
-        print links
         return links
 
     # filters out states that don't have any polling data
