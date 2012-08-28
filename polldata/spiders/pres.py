@@ -35,17 +35,19 @@ class PresSpider(CrawlSpider):
     def parseStatePolls(self, response):
         items = []
         hxs = HtmlXPathSelector(response)
+
+        state = hxs.select('//*[@id="main-poll-title"]/text').extract()
         polls = hxs.select('//*[@id="polling-data-full"]/table/tr[not(@class) or @class="isInRcpAvg"]')
 
         for poll in polls:
             polldata = poll.select('td/text() | td/a/text()')
 
             item = PresPollItem()
+            item['state']   = state
             item['service'] = polldata[0].extract()
-            item['start']   = polldata[1].extract()
-            item['end']     = polldata[1].extract()
-            # TODO: split text into seperate start / end dates
-            #       currently each has 8/11 - 8/17
+            daterange       = polldata[1].extract().split(' - ')
+            item['start']   = daterange[0]
+            item['end']     = daterange[1]
             item['sample']  = polldata[2].extract()
             item['dem']     = polldata[3].extract()
             item['rep']     = polldata[4].extract()
@@ -53,6 +55,8 @@ class PresSpider(CrawlSpider):
             # Calculating ind
             #   * ind = polldata[5] (use if it exists)?
             #   * ind = 100 - dem - rep?
+
+            # TODO: check if end date is after current 'last checked' date
             items.append(item)
 
         return items

@@ -7,6 +7,7 @@ from scrapy.item import Item, Field
 
 class PresPollItem(Item):
     # define the fields for your item here like:
+    state   = Field()
     service = Field()
     start   = Field()
     end     = Field()
