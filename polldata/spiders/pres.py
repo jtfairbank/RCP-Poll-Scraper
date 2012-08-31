@@ -12,6 +12,7 @@ class PresSpider(CrawlSpider):
     start_urls = [
         "http://www.realclearpolitics.com/epolls/latest_polls/president/"
     ]
+    fields_to_export = ['state', 'service', 'end', 'sample', 'voters', 'dem', 'rep', 'ind']
 
     rules = (
         Rule(
@@ -36,25 +37,48 @@ class PresSpider(CrawlSpider):
         items = []
         hxs = HtmlXPathSelector(response)
 
-        state = hxs.select('//*[@id="main-poll-title"]/text').extract()
+        state = hxs.select('//*[@id="main-poll-title"]/text()').extract()[0].split(':')[0]
         polls = hxs.select('//*[@id="polling-data-full"]/table/tr[not(@class) or @class="isInRcpAvg"]')
 
         for poll in polls:
             polldata = poll.select('td/text() | td/a/text()')
 
             item = PresPollItem()
-            item['state']   = state
+            item['state'] = state
             item['service'] = polldata[0].extract()
-            daterange       = polldata[1].extract().split(' - ')
-            item['start']   = daterange[0]
-            item['end']     = daterange[1]
-            item['sample']  = polldata[2].extract()
-            item['dem']     = polldata[3].extract()
-            item['rep']     = polldata[4].extract()
+
+            daterange = polldata[1].extract().split(' - ')
+            # BugFix w/ If Statement
+            #  - Preventative, based on the BugFix for sampleInfo (see below)
+            #  - Prevents errors when either the start or end dates is missing,
+            #    thus there is only one component in sampleInfo.
+            if len(daterange) > 1:
+                item['start'] = daterange[0] + '/2012'
+                item['end']  = daterange[1] + '/2012'
+            else:
+                item['start'] = ''
+                item['end'] = daterange[0] # most important, so it gets any content
+
+            sampleInfo      = polldata[2].extract().split(' ')
+            # BugFix w/ If Statement
+            #  - Prevents errors when either the sample size or the sample type
+            #       (RV: registered voters, or LV: likely voters)
+            #    is missing, thus there is only one component in sampleInfo.
+            if len(sampleInfo) > 1:
+                item['sample']  = sampleInfo[0]
+                item['voters']  = sampleInfo[1]
+            else:
+                item['sample'] = sampleInfo[0]
+                item['voters'] = ''
+
+            # TODO: check if first is left or right
+            item['dem']     = polldata[4].extract()
+            item['rep']     = polldata[5].extract()
             # item['ind']     = polldata[0].extract()
             # Calculating ind
             #   * ind = polldata[5] (use if it exists)?
             #   * ind = 100 - dem - rep?
+            item['ind']     = 0
 
             # TODO: check if end date is after current 'last checked' date
             items.append(item)

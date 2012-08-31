@@ -12,6 +12,7 @@ class PresPollItem(Item):
     start   = Field()
     end     = Field()
     sample  = Field()
+    voters  = Field()
     dem     = Field()
     rep     = Field()
     ind     = Field()
