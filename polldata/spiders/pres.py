@@ -47,29 +47,13 @@ class PresSpider(CrawlSpider):
             item['state'] = state
             item['service'] = polldata[0].extract()
 
-            daterange = polldata[1].extract().split(' - ')
-            # BugFix w/ If Statement
-            #  - Preventative, based on the BugFix for sampleInfo (see below)
-            #  - Prevents errors when either the start or end dates is missing,
-            #    thus there is only one component in sampleInfo.
-            if len(daterange) > 1:
-                item['start'] = daterange[0] + '/2012'
-                item['end']  = daterange[1] + '/2012'
-            else:
-                item['start'] = ''
-                item['end'] = daterange[0] # most important, so it gets any content
+            daterange = self._parsePollDates(polldata[1].extract())
+            item['start'] = daterange[0]
+            item['end']  = daterange[1]
 
-            sampleInfo      = polldata[2].extract().split(' ')
-            # BugFix w/ If Statement
-            #  - Prevents errors when either the sample size or the sample type
-            #       (RV: registered voters, or LV: likely voters)
-            #    is missing, thus there is only one component in sampleInfo.
-            if len(sampleInfo) > 1:
-                item['sample']  = sampleInfo[0]
-                item['voters']  = sampleInfo[1]
-            else:
-                item['sample'] = sampleInfo[0]
-                item['voters'] = ''
+            sampleInfo = self._parseSampleInfo(polldata[2].extract())
+            item['sample']  = sampleInfo[0]
+            item['voters']  = sampleInfo[1]
 
             # TODO: check if first is left or right
             item['dem']     = polldata[4].extract()
@@ -84,6 +68,40 @@ class PresSpider(CrawlSpider):
             items.append(item)
 
         return items
+
+    def _parsePollDates(self, dateText):
+        daterange = dateText.split(' - ')
+
+        # BugFix w/ If Statement and Array Resize
+        #  - Preventative, based on the BugFix for _parseSampleInfo (see below)
+        #  - Prevents errors when either the start or end dates is missing,
+        #    so there is only one component in sampleInfo.
+        if len(daterange) > 1:
+            daterange[0] += '/2012' # start
+            daterange[1] += '/2012' # end
+        else:
+            daterange.resize(2)
+            daterange[0] = '' # start
+            daterange[1] = daterange[0] + '/2012' # end
+
+        return daterange
+
+    def _parseSampleInfo(self, sampleInfoText):
+        sampleInfo = sampleInfoText.split(' ')
+
+        # BugFix w/ If Statement
+        #  - Prevents errors when either the sample size or the sample type
+        #       (RV: registered voters, or LV: likely voters)
+        #    is missing, thus there is only one component in sampleInfo which
+        #    is assumed to be the sample size.
+        if sampleInfo[0] is None:
+            sampleInfo[0] = ''
+
+        if len(sampleInfo) < 2:
+            sampleInfo.resize(2)
+            sampleInfo[1] = ''
+
+        return sampleInfo
 
     # filters out repeat state poll links
     # ie only get new polls from Ohio once
