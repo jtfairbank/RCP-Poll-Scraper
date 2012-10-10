@@ -1,6 +1,6 @@
-Scrapy==0.15.1
-Twisted==12.1.0
-lxml==3.0alpha2
+Scrapy==dev
+Twisted==12.2.0
+lxml==3.0
 pyOpenSSL==0.13
 w3lib==1.2
 wsgiref==0.1.2
