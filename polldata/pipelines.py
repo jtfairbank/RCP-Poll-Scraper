@@ -32,12 +32,13 @@ class CsvExportPipeline(object):
         return pipeline
 
     def spider_opened(self, spider):
-        file = open('data/pres_latest.csv', 'w') # write
-        self.dict_file = open('data/dict.json', 'wr+') # read + write
+        file = open('data/pres_latest.csv', 'w')
         try:
+            self.dict_file = open('data/dict.json', 'r+w')
             self.objs = json.load(self.dict_file)
-        except (ValueError, IOError):
-            print "FAILED TO LOAD"
+        except (IOError):
+            # data/dict.json doesn't exist
+            self.dict_file = open('data/dict.json', 'w')
             self.objs = {}
         self.files[spider] = file
         self.exporter = CsvItemExporter(file, fields_to_export=spider.fields_to_export)
@@ -47,7 +48,7 @@ class CsvExportPipeline(object):
         self.exporter.finish_exporting()
         file = self.files.pop(spider)
         file.close()
-        self.dict_file.write(str(self.objs))
+        self.dict_file.write( json.dumps(self.objs) )
         self.dict_file.close()
 
     def process_item(self, item, spider):
@@ -56,7 +57,7 @@ class CsvExportPipeline(object):
         hasher.update(identifier)
         obj_hash = hasher.hexdigest()
         if obj_hash not in self.objs:
-            self.objs[obj_hash] = item
+            self.objs[obj_hash] = True
             self.exporter.export_item(item)
             return item
         else:
