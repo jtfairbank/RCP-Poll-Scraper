@@ -6,6 +6,8 @@
 from scrapy import signals
 from scrapy.contrib.exporter import CsvItemExporter
 import json
+import hashlib
+
 '''
 Exports Poll Items into a CSV file in an order defined by the existing process.
 
@@ -31,10 +33,11 @@ class CsvExportPipeline(object):
 
     def spider_opened(self, spider):
         file = open('data/pres_latest.csv', 'w') # write
-        self.dict_file = open('data/dict.json', 'r+') # read + write
+        self.dict_file = open('data/dict.json', 'wr+') # read + write
         try:
             self.objs = json.load(self.dict_file)
         except (ValueError, IOError):
+            print "FAILED TO LOAD"
             self.objs = {}
         self.files[spider] = file
         self.exporter = CsvItemExporter(file, fields_to_export=spider.fields_to_export)
@@ -49,7 +52,9 @@ class CsvExportPipeline(object):
 
     def process_item(self, item, spider):
         identifier = item['dem']+item['end']+item['rep']+str(item['ind'])+item['sample']+item['service']
-        obj_hash = hash(identifier)
+        hasher = hashlib.md5()
+        hasher.update(identifier)
+        obj_hash = hasher.hexdigest()
         if obj_hash not in self.objs:
             self.objs[obj_hash] = item
             self.exporter.export_item(item)
