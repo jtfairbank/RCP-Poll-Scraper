@@ -55,4 +55,4 @@ class CsvExportPipeline(object):
             self.exporter.export_item(item)
             return item
         else:
-            return None
+            raise DropItem("Poll is not new.")
