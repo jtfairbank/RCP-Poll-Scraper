@@ -30,11 +30,11 @@ class CsvExportPipeline(object):
         return pipeline
 
     def spider_opened(self, spider):
-        file = open('data/pres_latest.csv', 'w+')
-        self.dict_file = open('data/dict.json', 'wr+')
+        file = open('data/pres_latest.csv', 'w') # write
+        self.dict_file = open('data/dict.json', 'r+') # read + write
         try:
             self.objs = json.load(self.dict_file)
-        except (ValueError):
+        except (ValueError, IOError):
             self.objs = {}
         self.files[spider] = file
         self.exporter = CsvItemExporter(file, fields_to_export=spider.fields_to_export)
