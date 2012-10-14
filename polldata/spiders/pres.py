@@ -5,6 +5,7 @@ from scrapy.item import Item
 from scrapy import log
 
 from polldata.items import PresPollItem
+from polldata.utils import parsePollData
 
 class PresSpider(CrawlSpider):
     """Create State-Level Presidential Polls
@@ -122,25 +123,12 @@ class PresSpider(CrawlSpider):
                     "rep": 4,
                 }
         """
-        # TODO: create a per-spider mapping from the table header's text values
-        #       to the pollitem's fields?
-        #       Also, pull this functionality out to a common utility class?
         lookup = {}
 
         i = 0
         for header in headers:
-            if header == "Poll":
-                lookup["service"] = i
-            elif header == "Date":
-                lookup["date"] = i
-            elif header == "Sample":
-                lookup["sample"] = i
-            elif header == "MoE":
-                lookup["error"] = i
-            elif header == "Romney (R)":
-                lookup["dem"] = i
-            elif header == "Obama (D)":
-                lookup["rep"] = i
+            attribute = headerToAttribute[header]
+            lookup[attribute] = i
 
             i += 1
 
@@ -262,7 +250,6 @@ class PresSpider(CrawlSpider):
         """
         noPollLink = "http://www.realclearpolitics.com/epolls/2012/president/2012_elections_electoral_college_map.html"
 
-        # TODO: remove without for loop?  ie links.remove(...) would remove all instances?
         for link in links:
             if link == noPollLink:
                 links.remove(link)
