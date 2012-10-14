@@ -39,6 +39,8 @@ class PresSpider(CrawlSpider):
         items = []
         hxs = HtmlXPathSelector(response)
 
+        lookup = self._getDataPositions( hxs.select('//*[@id="polling-data-full"]/table/tr[1]/th/text()').extract() )
+
         state = hxs.select('//*[@id="main-poll-title"]/text()').extract()[0].split(':')[0]
         polls = hxs.select('//*[@id="polling-data-full"]/table/tr[not(@class) or @class="isInRcpAvg"]')
 
@@ -47,29 +49,51 @@ class PresSpider(CrawlSpider):
 
             item = PresPollItem()
             item['state'] = state
-            item['service'] = polldata[0].extract()
+            item['service'] = polldata[ lookup['service'] ].extract()
 
-            daterange = self._parsePollDates(polldata[1].extract())
+            daterange = self._parsePollDates(polldata[ lookup['date'] ].extract())
             item['start'] = daterange[0]
             item['end']  = daterange[1]
 
-            sampleInfo = self._parseSampleInfo(polldata[2].extract())
+            sampleInfo = self._parseSampleInfo(polldata[ lookup['sample'] ].extract())
             item['sample']  = sampleInfo[0]
             item['voters']  = sampleInfo[1]
 
-            # TODO: check if first is left or right
-            item['dem']     = polldata[4].extract()
-            item['rep']     = polldata[5].extract()
+            item['dem']     = polldata[ lookup['dem'] ].extract()
+            item['rep']     = polldata[ lookup['rep'] ].extract()
             # item['ind']     = polldata[0].extract()
             # Calculating ind
             #   * ind = polldata[5] (use if it exists)?
             #   * ind = 100 - dem - rep?
+            #   *   what about undecideds? 
             item['ind']     = 0
 
-            # TODO: check if end date is after current 'last checked' date
             items.append(item)
 
         return items
+
+    def _getDataPositions(self, headers):
+        lookup = {}
+
+        i = 0
+        for header in headers:
+            print '"' + str(header) + '"'
+            if header == "Poll":
+                lookup["service"] = i
+            elif header == "Date":
+                lookup["date"] = i
+            elif header == "Sample":
+                lookup["sample"] = i
+            elif header == "MoE":
+                lookup["error"] = i
+            elif header == "Romney (R)":
+                lookup["dem"] = i
+            elif header == "Obama (D)":
+                lookup["rep"] = i
+
+            i += 1
+
+        return lookup
 
     def _parsePollDates(self, dateText):
         daterange = dateText.split(' - ')
@@ -112,6 +136,5 @@ class PresSpider(CrawlSpider):
 
     # filters out states that don't have any polling data
     # probably shouldn't worry about this as all latest poll states will have a poll
-    # TODO: remove this function and process_request filed from Rules
     def processRequest(self, request):
         return request
