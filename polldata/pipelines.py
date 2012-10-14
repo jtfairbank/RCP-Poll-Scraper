@@ -5,6 +5,7 @@
 
 from scrapy import signals
 from scrapy.contrib.exporter import CsvItemExporter
+from scrapy.exceptions import DropItem
 import json
 import hashlib
 
@@ -39,7 +40,10 @@ class CsvExportPipeline(object):
         except (IOError):
             # data/dict.json doesn't exist
             self.dict_file = open('data/dict.json', 'w')
-            self.objs = {}
+            self.objs = []
+        except ValueError:
+            print("FAILED TO READ")
+            self.objs = []
         self.files[spider] = file
         self.exporter = CsvItemExporter(file, fields_to_export=spider.fields_to_export)
         self.exporter.start_exporting()
@@ -57,7 +61,7 @@ class CsvExportPipeline(object):
         hasher.update(identifier)
         obj_hash = hasher.hexdigest()
         if obj_hash not in self.objs:
-            self.objs[obj_hash] = True
+            self.objs.append(obj_hash)
             self.exporter.export_item(item)
             return item
         else:
