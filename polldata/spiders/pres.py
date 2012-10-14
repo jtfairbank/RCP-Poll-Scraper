@@ -77,7 +77,6 @@ class PresSpider(CrawlSpider):
 
         i = 0
         for header in headers:
-            print '"' + str(header) + '"'
             if header == "Poll":
                 lookup["service"] = i
             elif header == "Date":
