@@ -83,13 +83,11 @@ class PresSpider(CrawlSpider):
             item['state'] = state
             item['service'] = polldata[ lookup['service'] ].extract()
 
-            daterange = self._parsePollDates(polldata[ lookup['date'] ].extract())
-            item['start'] = daterange[0]
-            item['end']  = daterange[1]
+            daterange = polldata[ lookup['date'] ].extract()
+            item['start'], item['end'] = self._parsePollDates(daterange)
 
-            sampleInfo = self._parseSampleInfo(polldata[ lookup['sample'] ].extract())
-            item['sample']  = sampleInfo[0]
-            item['voters']  = sampleInfo[1]
+            sample = polldata[ lookup['sample'] ].extract()
+            item['voters'], item['sample'] = self._parseSampleInfo(sample)
 
             item['dem']     = polldata[ lookup['dem'] ].extract()
             item['rep']     = polldata[ lookup['rep'] ].extract()
@@ -180,22 +178,22 @@ class PresSpider(CrawlSpider):
         # TODO: attempt to intelligently determine the year, instead of assuming
         #       that all polls occur in the current year?
         #       Are there any polls from previous years? YES
-        # TODO: return multiple items instead of an array of items
         daterange = dateText.split(' - ')
+        start = ''
+        end = ''
 
         # BugFix w/ If Statement and Array Resize
         #  - Preventative, based on the BugFix for _parseSampleInfo (see below)
         #  - Prevents errors when either the start or end dates is missing,
         #    so there is only one component in sampleInfo.
         if len(daterange) > 1:
-            daterange[0] += '/2012' # start
-            daterange[1] += '/2012' # end
-        else:
-            daterange.resize(2)
-            daterange[1] = daterange[0] + '/2012' # end
-            daterange[0] = '' # start
+            start = daterange[0] + '/2012'
+            end = daterange[1] + '/2012'
 
-        return daterange
+        elif len(daterange) > 0:
+            end = daterange[0] + '/2012'
+
+        return start, end
 
     def _parseSampleInfo(self, sampleInfoText):
         """Find the sample size and sample type of a poll.
@@ -229,22 +227,25 @@ class PresSpider(CrawlSpider):
         #       only one is.  This can be done by trying to read the component
         #       as an integer (which will work for sample size but not sample
         #       type).
-        # TODO: return multiple items instead of an array of items
         sampleInfo = sampleInfoText.split(' ')
+        sampleSize = ''
+        sampleType = ''
 
         # BugFix w/ If Statement
         #  - Prevents errors when either the sample size or the sample type
         #       (RV: registered voters, or LV: likely voters)
         #    is missing, thus there is only one component in sampleInfo which
         #    is assumed to be the sample type.
-        if sampleInfo[0] is None:
-            sampleInfo[0] = ''
+        if len(sampleInfo) > 1:
+            sampleSize = sampleInfo[0]
+            sampleType = sampleInfo[1]
 
-        if len(sampleInfo) < 2:
-            sampleInfo.resize(2)
-            sampleInfo[1] = ''
+        elif len(sampleInfo) > 0:
+            # TODO: determine which component sampleInfo represents
+            #       don't assume type, like currently does
+            sampleType = sampleInfo[0]
 
-        return sampleInfo
+        return sampleSize, sampleType
 
     def processLinks(self, links):
         """
