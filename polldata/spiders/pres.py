@@ -34,6 +34,8 @@ class PresSpider(CrawlSpider):
         ),
     )
 
+    # TODO: use a custom link extractor to crawl //*[@id="search_by_race"]/optgroup[1]/*
+
 
     def parseStatePolls(self, response):
         items = []
@@ -95,6 +97,35 @@ class PresSpider(CrawlSpider):
         return lookup
 
     def _parsePollDates(self, dateText):
+        """Find the start and end date of a poll.
+
+        Break a date range string into the starting date and ending date.
+
+        Args:
+            dateText
+                A string that describes the dates the poll was conducted
+                    during by providing a range from the poll's start date to
+                    its end date.  The year is ommitted.
+                Ex: "10/1 - 10/3"
+                    "5/3"
+
+        Returns:
+            An array with two entries:
+                1: the poll's start date
+                2: the poll's end date
+            If there is only one date (eg. the poll was conducted during one
+                day, or information is unknown) then that date is used as the
+                end date and the start date is left as an empty string.
+            The current year is appended to the end of the poll dates.  This is
+                problematic since polls conducted in previous years are also
+                listed.
+            Ex. ["10/1/2012", "10/3/2012"]
+                ["", "5/3/2012"]
+
+        """
+        # TODO: attempt to intelligently determine the year, instead of assuming
+        #       that all polls occur in the current year?
+        #       Are there any polls from previous years?
         daterange = dateText.split(' - ')
 
         # BugFix w/ If Statement and Array Resize
@@ -106,8 +137,8 @@ class PresSpider(CrawlSpider):
             daterange[1] += '/2012' # end
         else:
             daterange.resize(2)
-            daterange[0] = '' # start
             daterange[1] = daterange[0] + '/2012' # end
+            daterange[0] = '' # start
 
         return daterange
 
@@ -128,12 +159,17 @@ class PresSpider(CrawlSpider):
 
         return sampleInfo
 
-    # filters out repeat state poll links
-    # ie only get new polls from Ohio once
     def processLinks(self, links):
+        """
+        Remove links to states with no polls.
+        """
+        noPollLink = "http://www.realclearpolitics.com/epolls/2012/president/2012_elections_electoral_college_map.html"
+
+        for link in links:
+            if link == noPollLink
+                links.remove(link)
+
         return links
 
-    # filters out states that don't have any polling data
-    # probably shouldn't worry about this as all latest poll states will have a poll
     def processRequest(self, request):
         return request
