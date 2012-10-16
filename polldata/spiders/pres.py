@@ -127,8 +127,9 @@ class PresSpider(CrawlSpider):
 
         i = 0
         for header in headers:
-            attribute = headerToAttribute[header]
-            lookup[attribute] = i
+            if header in parsePollData.headerToAttribute:
+                attribute = parsePollData.headerToAttribute[header]
+                lookup[attribute] = i
 
             i += 1
 
@@ -251,7 +252,7 @@ class PresSpider(CrawlSpider):
         noPollLink = "http://www.realclearpolitics.com/epolls/2012/president/2012_elections_electoral_college_map.html"
 
         for link in links:
-            if link == noPollLink:
+            if link.url == noPollLink:
                 links.remove(link)
 
         return links
