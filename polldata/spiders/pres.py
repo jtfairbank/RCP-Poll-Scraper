@@ -44,6 +44,9 @@ class PresSpider(CrawlSpider):
                 #       may obama come first sometimes?
 
                 allow_domains=('realclearpolitics.com',),
+                tags=['option'], # use select box to find all the state's links
+                attrs=['value'], # value of select box is the link
+                restrict_xpaths="//*", # TODO: xpath for presidential state polls optgroup
             ),
             callback='parseStatePolls',
             # follow=None, # default 
@@ -51,10 +54,6 @@ class PresSpider(CrawlSpider):
             process_request='processRequest',
         ),
     )
-
-    # TODO: use a custom link extractor to crawl //*[@id="search_by_race"]/optgroup[1]/*
-    #       instead of links on the page
-
 
     def parseStatePolls(self, response):
         """Find pollitems for a state.
@@ -232,6 +231,7 @@ class PresSpider(CrawlSpider):
         elif len(sampleInfo) > 0:
             # TODO: determine which component sampleInfo represents
             #       don't assume type, like currently does
+            #       see above TODO
             sampleType = sampleInfo[0]
 
         return sampleSize, sampleType
