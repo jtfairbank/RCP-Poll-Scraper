@@ -9,19 +9,23 @@ from scrapy.exceptions import DropItem
 import json
 import hashlib
 
-'''
-Exports Poll Items into a CSV file in an order defined by the existing process.
-
-It is currently setup only for the presidential poll items, but should be
-modified to work with any poll item.
- - How do we define the item field's order for a general exporter?
-    - Define them in the item itself?
- - From BaseItemExporter:
-    - fields_to_export (CsvItemExporter will respect the order)
-'''
 class CsvExportPipeline(object):
+    '''
+    Exports Poll Items into a CSV file in an order defined by the existing process.
+
+    It is currently setup only for the presidential poll items, but should be
+    modified to work with any poll item.
+     - How do we define the item field's order for a general exporter?
+        - Define them in the item itself?
+     - From BaseItemExporter:
+        - fields_to_export (CsvItemExporter will respect the order)
+    '''
+
     def __init__(self):
-        self.files = {}
+        self.latest_polls_files = {}
+        self.exporters = {}
+        self.prev_polls_files = {}
+        self.prev_polls = {}
 
     # see extensions in scrappy documentation
     # this is the main entry point for the pipeline
@@ -33,36 +37,48 @@ class CsvExportPipeline(object):
         return pipeline
 
     def spider_opened(self, spider):
-        file = open('data/pres_latest.csv', 'w')
+        latest_polls_file = open('data/' + spider.name + '_latest.csv', 'w')
+        self.latest_polls_files[spider] = latest_polls_file
+
+        exporter = CsvItemExporter(file, fields_to_export=spider.fields_to_export)
+        exporter.start_exporting()
+        self.exporters[spider] = exporter
+
+        prev_polls_fName = 'data/' + spider.name + 'dict.json'
         try:
-            self.dict_file = open('data/dict.json', 'r+w')
-            self.objs = json.load(self.dict_file)
+            prev_polls_file = open(prev_polls_fName, 'r+w')
+            prev_polls = json.load(prev_polls_file)
         except (IOError):
             # data/dict.json doesn't exist
-            self.dict_file = open('data/dict.json', 'w')
-            self.objs = []
+            prev_polls_file = open(prev_polls_fName, 'w')
+            prev_polls = []
         except ValueError:
-            print("FAILED TO READ")
-            self.objs = []
-        self.files[spider] = file
-        self.exporter = CsvItemExporter(file, fields_to_export=spider.fields_to_export)
-        self.exporter.start_exporting()
+            # dict.json is malformed, should be inspected before being overwritten
+            raise ValueError("Malformed prev_polls_file for " + spider.name + ".")
+        self.prev_polls_files[spider] = prev_polls_file
+        self.prev_polls[spider] = prev_polls
 
     def spider_closed(self, spider):
-        self.exporter.finish_exporting()
-        file = self.files.pop(spider)
-        file.close()
-        self.dict_file.write( json.dumps(self.objs) )
-        self.dict_file.close()
+        self.exporters[spider].finish_exporting()
+
+        latest_polls_file = self.latest_polls_files.pop(spider)
+        latest_polls_file.close()
+
+        prev_polls_file = self.prev_polls_files.pop(spider)
+        prev_polls_file.write( json.dumps(self.prev_polls[spider]) )
+        prev_polls_file.close()
 
     def process_item(self, item, spider):
+        prev_polls = self.prev_polls[spider]
+
         identifier = item['dem']+item['end']+item['rep']+str(item['ind'])+item['sample']+item['service']
         hasher = hashlib.md5()
         hasher.update(identifier)
-        obj_hash = hasher.hexdigest()
-        if obj_hash not in self.objs:
-            self.objs.append(obj_hash)
-            self.exporter.export_item(item)
+
+        poll_hash = hasher.hexdigest()
+        if poll_hash not in prev_polls:
+            prev_polls.append(obj_hash)
+            self.exporters[spider].export_item(item)
             return item
         else:
             raise DropItem("Poll is not new.")
