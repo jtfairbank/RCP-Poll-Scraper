@@ -21,6 +21,12 @@ class CsvExportPipeline(object):
         - fields_to_export (CsvItemExporter will respect the order)
     '''
 
+    # TODO: Track spider names to make sure the same spider isn't running twice.
+    #       Use some sort of persistent tracking?  ie a file that indicates a
+    #       lock?
+    #           - this would prevent the same spider from being run twice by
+    #             two different calls to crawl
+
     def __init__(self):
         self.latest_polls_files = {}
         self.exporters = {}
@@ -40,11 +46,11 @@ class CsvExportPipeline(object):
         latest_polls_file = open('data/' + spider.name + '_latest.csv', 'w')
         self.latest_polls_files[spider] = latest_polls_file
 
-        exporter = CsvItemExporter(file, fields_to_export=spider.fields_to_export)
+        exporter = CsvItemExporter(latest_polls_file, fields_to_export=spider.fields_to_export)
         exporter.start_exporting()
         self.exporters[spider] = exporter
 
-        prev_polls_fName = 'data/' + spider.name + 'dict.json'
+        prev_polls_fName = 'data/' + spider.name + '_dict.json'
         try:
             prev_polls_file = open(prev_polls_fName, 'r+w')
             prev_polls = json.load(prev_polls_file)
@@ -77,7 +83,7 @@ class CsvExportPipeline(object):
 
         poll_hash = hasher.hexdigest()
         if poll_hash not in prev_polls:
-            prev_polls.append(obj_hash)
+            prev_polls.append(poll_hash)
             self.exporters[spider].export_item(item)
             return item
         else:
