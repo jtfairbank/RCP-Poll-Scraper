@@ -4,7 +4,7 @@ from urlparse import urljoin
 from w3lib.html import remove_tags, remove_entities, replace_escape_chars
 
 from scrapy.link import Link
-from scrapy.contrib.linkextractors.regex import RegexLinkExtractor
+from scrapy.contrib.linkextractors.sgml import SgmlLinkExtractor
 
 linkre = re.compile(
         "\\\\x3Coption\s.*?value=(\\\"[.#]+?\\\"|\\\'[.#]+?\\\'|[^\s]+?)(\\\\x3E|\s.*?\\\\x3E)(.*?)\\\\x3C[/ ]?option\\\\x3E",
@@ -14,7 +14,7 @@ def clean_link(link_text):
     """Remove leading and trailing whitespace and punctuation"""
     return link_text.strip("\t\r\n '\"\\")
 
-class RCP_RegexLinkExtractor(RegexLinkExtractor):
+class RCP_RegexLinkExtractor(SgmlLinkExtractor):
     """High performant link extractor"""
 
     def _extract_links(self, response_text, response_url, response_encoding, base_url=None):

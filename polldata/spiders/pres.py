@@ -8,7 +8,7 @@ from scrapy import log
 
 from polldata.items import PresPollItem
 from polldata.utils import parsePollData
-from polldata.linkextractors.regex import RCP_RegexLinkExtractor
+from polldata.linkextractors.rcp_regex import RCP_RegexLinkExtractor
 
 class PresSpider(CrawlSpider):
     """Create State-Level Presidential Polls
@@ -265,7 +265,7 @@ class PresSpider(CrawlSpider):
         Override the requests_to_follow function from CrawlSpider to allow link
         extraction from all files.  Specifically, javascript files need to work
         to get links from the RCP javascript file that generates the select box
-        on http://www.realclearpolitics.com/epolls/2012/president/us/general_election_romney_vs_obama-1171.html.
+        on http://www.realclearpolitics.com/epolls/latest_polls/president/.
 
         Args:
             response
