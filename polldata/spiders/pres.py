@@ -1,11 +1,14 @@
+import re
+
 from scrapy.contrib.spiders import CrawlSpider, Rule
-from scrapy.contrib.linkextractors.sgml import SgmlLinkExtractor
+from scrapy.http import Request
 from scrapy.selector import HtmlXPathSelector
 from scrapy.item import Item
 from scrapy import log
 
 from polldata.items import PresPollItem
 from polldata.utils import parsePollData
+from polldata.linkextractors.regex import RCP_RegexLinkExtractor
 
 class PresSpider(CrawlSpider):
     """Create State-Level Presidential Polls
@@ -25,7 +28,7 @@ class PresSpider(CrawlSpider):
     name = "pres2012"
     allowed_domains = ["realclearpolitics.com"]
     start_urls = [
-        "http://www.realclearpolitics.com/epolls/latest_polls/president/"
+        "http://www.realclearpolitics.com/epolls/2012/widget/search_by_race.js",
     ]
     fields_to_export = ['state', 'service', 'end', 'sample', 'voters', 'dem', 'rep', 'ind']
     states = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'District Of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'PALAU', 'Pennsylvania', 'PUERTO RICO', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
@@ -33,7 +36,7 @@ class PresSpider(CrawlSpider):
 
     rules = (
         Rule(
-            SgmlLinkExtractor(
+            RCP_RegexLinkExtractor(
                 allow=(r"epolls/2012/president/[a-z]{2}/[a-z]+_romney_vs_obama-[0-9]{4}\.html"),
                 # Regex explanation:
                 #     [a-z]{2} - matches a two character state abbreviation
@@ -44,9 +47,6 @@ class PresSpider(CrawlSpider):
                 #       may obama come first sometimes?
 
                 allow_domains=('realclearpolitics.com',),
-                tags=['option'], # use select box to find all the state's links
-                attrs=['value'], # value of select box is the link
-                restrict_xpaths="//*", # TODO: xpath for presidential state polls optgroup
             ),
             callback='parseStatePolls',
             # follow=None, # default 
@@ -259,3 +259,30 @@ class PresSpider(CrawlSpider):
 
     def processRequest(self, request):
         return request
+
+    def _requests_to_follow(self, response):
+        """
+        Override the requests_to_follow function from CrawlSpider to allow link
+        extraction from all files.  Specifically, javascript files need to work
+        to get links from the RCP javascript file that generates the select box
+        on http://www.realclearpolitics.com/epolls/2012/president/us/general_election_romney_vs_obama-1171.html.
+
+        Args:
+            response
+                An html response that contains the presidential polling data for a state.
+
+        Yields:
+            Every link processed by each rule (so links x rules).
+        """
+        #if not isinstance(response, HtmlResponse):
+        #    return
+        seen = set()
+        for n, rule in enumerate(self._rules):
+            links = [l for l in rule.link_extractor.extract_links(response) if l not in seen]
+            if links and rule.process_links:
+                links = rule.process_links(links)
+            seen = seen.union(links)
+            for link in links:
+                r = Request(url=link.url, callback=self._response_downloaded)
+                r.meta.update(rule=n, link_text=link.text)
+                yield rule.process_request(r)
