@@ -30,6 +30,7 @@ class PresSpider(CrawlSpider):
     start_urls = [
         "http://www.realclearpolitics.com/epolls/2012/widget/search_by_race.js",
     ]
+    fields_to_export = ['state', 'service', 'end', 'sample', 'voters', 'dem', 'rep', 'ind']
 
     rules = (
         Rule(
@@ -39,9 +40,6 @@ class PresSpider(CrawlSpider):
                 #     [a-z]{2} - matches a two character state abbreviation
                 #     [a-z]*   - matches a state name
                 #     [0-9]{4} - matches a 4 number unique webpage identifier
-
-                # TODO: does this regex always hold for '_romney_vs_obama-' or
-                #       may obama come first sometimes?
 
                 allow_domains=('realclearpolitics.com',),
             ),
