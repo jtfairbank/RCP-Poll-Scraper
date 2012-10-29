@@ -18,20 +18,31 @@ _headerToAttribute = {
 
 def getAttribute(header):
     """
-    Return the attribute given a header.  Note that since the (R) and (D)
-    headers are non standard and have the candidate name before them, we
-    have to also check the last three characters of the header for matches
-    to these headers.
+    Return the attribute given a header.
 
     Params:
-        header - the RCP State Poll page's  table header for a column of data
+        header
+            The RCP State Poll page's  table header for a column of data
+            Preprocessing:
+              - If the header contains the 'dem' or 'rep' headers, set it to
+                them explicitly.  This is necessary because those headers have
+                arbitrary text (candidate names) before them in the raw html.
+            Ex: 'Poll' or 'Obama (D)'
+
 
     Returns:
-        the matching attribute value if the header exists in _headerToAttribute
+        The matching attribute value if the header exists in _headerToAttribute.
+        Ex: 'service' or 'dem'
+
         None if the header doesn't exist in the _headerToAttribute lookup
     """
+    # preprocessing
+    if '(D)' in header:
+        header = '(D)'
+    if '(R)' in header:
+        header = '(R)'
+
+    # lookup
     if header in _headerToAttribute:
         return _headerToAttribute[header]
-    elif header[-3:] in _headerToAttribute:
-        return _headerToAttribute[ header[-3:] ]
     return None
