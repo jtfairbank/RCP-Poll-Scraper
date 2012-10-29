@@ -121,8 +121,8 @@ class PresSpider(CrawlSpider):
 
         i = 0
         for header in headers:
-            if header in parsePollData.headerToAttribute:
-                attribute = parsePollData.headerToAttribute[header]
+            attribute = parsePollData.getAttribute(header)
+            if attribute is not None:
                 lookup[attribute] = i
 
             i += 1
