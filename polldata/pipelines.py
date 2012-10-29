@@ -32,6 +32,7 @@ class CsvExportPipeline(object):
         self.exporters = {}
         self.prev_polls_files = {}
         self.prev_polls = {}
+        self.newitems = {}
 
     # see extensions in scrappy documentation
     # this is the main entry point for the pipeline
@@ -64,7 +65,12 @@ class CsvExportPipeline(object):
         self.prev_polls_files[spider] = prev_polls_file
         self.prev_polls[spider] = prev_polls
 
+        self.newitems[spider] = []
+
     def spider_closed(self, spider):
+        sorteditems = sorted(self.newitems[spider], key=lambda item: item['state'])
+        for item in sorteditems:
+            self.exporters[spider].export_item(item)
         self.exporters[spider].finish_exporting()
 
         latest_polls_file = self.latest_polls_files.pop(spider)
@@ -84,7 +90,7 @@ class CsvExportPipeline(object):
         poll_hash = hasher.hexdigest()
         if poll_hash not in prev_polls:
             prev_polls.append(poll_hash)
-            self.exporters[spider].export_item(item)
+            self.newitems[spider].append(item)
             return item
         else:
             raise DropItem("Poll is not new.")
