@@ -14,5 +14,19 @@ Installation
 
 Scraping
 --------
-The process for scraping polling data will be described here once the spiders
-have been created.
+The Spiders build a CSV of the latest presidential polls since it was last run,
+so it is important to run the spider any time that the numbers are ran in order
+to keep it up to date.
+
+To run it for the Presidential 2012 Polls:
+    1. cd into the base directory: `git/RCP-Poll-Scraper/`
+    2. Run `scrapy crawl pres2012`
+    3. Check the output in `data/pres2012_latest.csv`
+
+To run it for the Senate 2012 Polls:
+    1. cd into the base directory: `git/RCP-Poll-Scraper/`
+    2. Run `scrapy crawl senate2012`
+    3. Check the output in `data/senate2012_latest.csv`
+
+If you experience any errors, please email Taylor.  Don't delete any of the
+files in `data/` or `logs/` so he can diagnose the issue.
