@@ -30,7 +30,7 @@ class CsvExportPipeline(object):
     def __init__(self):
         self.latest_polls_files = {}
         self.exporters = {}
-        self.prev_polls_files = {}
+        self.prev_polls_fNames = {}
         self.prev_polls = {}
         self.newitems = {}
 
@@ -53,16 +53,16 @@ class CsvExportPipeline(object):
 
         prev_polls_fName = 'data/' + spider.name + '_dict.json'
         try:
-            prev_polls_file = open(prev_polls_fName, 'r+w')
+            prev_polls_file = open(prev_polls_fName, 'r')
             prev_polls = json.load(prev_polls_file)
+            prev_polls_file.close()
         except (IOError):
             # data/dict.json doesn't exist
-            prev_polls_file = open(prev_polls_fName, 'w')
             prev_polls = []
         except ValueError:
             # dict.json is malformed, should be inspected before being overwritten
             raise ValueError("Malformed prev_polls_file for " + spider.name + ".")
-        self.prev_polls_files[spider] = prev_polls_file
+        self.prev_polls_fNames[spider] = prev_polls_fName
         self.prev_polls[spider] = prev_polls
 
         self.newitems[spider] = []
@@ -76,7 +76,8 @@ class CsvExportPipeline(object):
         latest_polls_file = self.latest_polls_files.pop(spider)
         latest_polls_file.close()
 
-        prev_polls_file = self.prev_polls_files.pop(spider)
+        prev_polls_fName = self.prev_polls_fNames.pop(spider)
+        prev_polls_file = open(prev_polls_fName, 'w')
         prev_polls_file.write( json.dumps(self.prev_polls[spider]) )
         prev_polls_file.close()
 
