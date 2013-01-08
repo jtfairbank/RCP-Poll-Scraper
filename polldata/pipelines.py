@@ -53,7 +53,7 @@ class CsvExportPipeline(object):
 
         prev_polls_fName = 'data/' + spider.name + '_dict.json'
         try:
-            prev_polls_file = open(prev_polls_fName, 'r+w')
+            prev_polls_file = open(prev_polls_fName, 'r+')
             prev_polls = json.load(prev_polls_file)
         except (IOError):
             # data/dict.json doesn't exist
@@ -71,6 +71,8 @@ class CsvExportPipeline(object):
         sorteditems = sorted(self.newitems[spider], key=lambda item: item['state'])
         for item in sorteditems:
             self.exporters[spider].export_item(item)
+            if 'house' in spider.name:
+                latest_polls_file.write('#'+item['title'])
         self.exporters[spider].finish_exporting()
 
         latest_polls_file = self.latest_polls_files.pop(spider)
@@ -83,7 +85,7 @@ class CsvExportPipeline(object):
     def process_item(self, item, spider):
         prev_polls = self.prev_polls[spider]
 
-        identifier = item['dem']+item['end']+item['rep']+str(item['ind'])+item['sample']+item['service']
+        identifier = item['dem']+item['end']+item['rep']+item['sample']+item['service']
         hasher = hashlib.md5()
         hasher.update(identifier)
 

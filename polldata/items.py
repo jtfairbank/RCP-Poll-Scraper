@@ -16,3 +16,18 @@ class PresPollItem(Item):
     dem     = Field()
     rep     = Field()
     ind     = Field()
+
+class HousePollItem(Item):
+    state = Field()
+    title   = Field()
+    candidates = Field()
+    service = Field()
+    start   = Field()
+    end     = Field()
+    sample  = Field()
+    voters  = Field()
+    dem     = Field()
+    rep     = Field()
+    ind     = Field() 
+
+

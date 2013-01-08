@@ -1,12 +1,12 @@
 import re
-
+from scrapy.contrib.linkextractors.sgml import SgmlLinkExtractor
 from scrapy.contrib.spiders import CrawlSpider, Rule
 from scrapy.http import Request
 from scrapy.selector import HtmlXPathSelector
 from scrapy.item import Item
 from scrapy import log
 
-from polldata.items import PresPollItem
+from polldata.items import HousePollItem
 from polldata.utils import parsePollData
 from polldata.linkextractors.rcp_regex import RCP_RegexLinkExtractor
 
@@ -16,11 +16,11 @@ class HouseSpider(CrawlSpider):
     start_urls = [
             "http://www.realclearpolitics.com/epolls/2012/house/2012_elections_house_map.html",
     ]
-    fields_to_export = ['state', 'service', 'end', 'sample', 'voters', 'dem', 'rep']
+    fields_to_export = ['service', 'end', 'sample', 'voters', 'dem', 'rep', 'ind']
 
     rules = (
         Rule(
-            RCP_RegexLinkExtractor(
+            SgmlLinkExtractor(
                 allow=(r"epolls/2012/house/[a-z]{2}/[a-z_]+-[0-9]{4}\.html"),
                 # Regex explanation:
                 #     [a-z]{2} - matches a two character state abbreviation
@@ -35,7 +35,6 @@ class HouseSpider(CrawlSpider):
             process_request='processRequest',
         ),
     )
-
     def parseStatePolls(self, response):
         """Find pollitems for a state.
 
@@ -54,14 +53,21 @@ class HouseSpider(CrawlSpider):
 
         lookup = self._getDataPositions( hxs.select('//*[@id="polling-data-full"]/table/tr[1]/th/text()').extract() )
 
-        state = hxs.select('//*[@id="main-poll-title"]/text()').extract()[0].split(':')[0]
+        title = hxs.select('//*[@id="main-poll-title"]/text()').extract()[0].split(':')[0]
+        district = ''
+        if 'At-Large' in title:
+            district = 'AL'
+        else:
+            district = re.findall(r'\d+', state)[0]            
+        state = hxs.select('//*[@id="snapshot"]/h3/text()').extract()[0].split()[0]
         polls = hxs.select('//*[@id="polling-data-full"]/table/tr[not(@class) or @class="isInRcpAvg"]')
 
         for poll in polls:
             polldata = poll.select('td/text() | td/a/text()')
 
-            item = PresPollItem()
+            item = HousePollItem()
             item['state'] = state
+            item['title'] = self._getStateAbbrev(state)+"-"+district
             item['service'] = polldata[ lookup['service'] ].extract()
 
             daterange = polldata[ lookup['date'] ].extract()
@@ -72,12 +78,12 @@ class HouseSpider(CrawlSpider):
 
             item['dem']     = polldata[ lookup['dem'] ].extract()
             item['rep']     = polldata[ lookup['rep'] ].extract()
-            # item['ind']     = polldata[0].extract()
-            # Calculating ind
-            #   * ind = polldata[5] (use if it exists)?
-            #   * ind = 100 - dem - rep?
-            #   *   what about undecideds? 
-
+            try:
+                item['ind'] = polldata[ lookup['ind'] ].extract()
+            except:
+                item['ind'] = 0
+            item['candidates'] = hxs.select('//*[@id="polling-data-full"]/table/tbody/tr[1]/th[4]/text()').extract()
+            item['candidates'] += hxs.select('//*[@id="polling-data-full"]/table/tbody/tr[1]/th[5]/text()').extract()
             items.append(item)
 
         return items
@@ -113,6 +119,12 @@ class HouseSpider(CrawlSpider):
             i += 1
 
         return lookup
+
+    def _getStateAbbrev(self, state):
+
+        state_to_abbrev = {"VERMONT": "VT", "GEORGIA": "GA", "IOWA": "IA", "Armed Forces Pacific": "AP", "GUAM": "GU", "KANSAS": "KS", "FLORIDA": "FL", "AMERICAN SAMOA": "AS", "NORTH CAROLINA": "NC", "HAWAII": "HI", "NEW YORK": "NY", "CALIFORNIA": "CA", "ALABAMA": "AL", "IDAHO": "ID", "FEDERATED STATES OF MICRONESIA": "FM", "Armed Forces Americas": "AA", "DELAWARE": "DE", "ALASKA": "AK", "ILLINOIS": "IL", "Armed Forces Africa": "AE", "SOUTH DAKOTA": "SD", "CONNECTICUT": "CT", "MONTANA": "MT", "MASSACHUSETTS": "MA", "PUERTO RICO": "PR", "Armed Forces Canada": "AE", "NEW HAMPSHIRE": "NH", "MARYLAND": "MD", "NEW MEXICO": "NM", "MISSISSIPPI": "MS", "TENNESSEE": "TN", "PALAU": "PW", "COLORADO": "CO", "Armed Forces Middle East": "AE", "NEW JERSEY": "NJ", "UTAH": "UT", "MICHIGAN": "MI", "WEST VIRGINIA": "WV", "WASHINGTON": "WA", "MINNESOTA": "MN", "OREGON": "OR", "VIRGINIA": "VA", "VIRGIN ISLANDS": "VI", "MARSHALL ISLANDS": "MH", "WYOMING": "WY", "OHIO": "OH", "SOUTH CAROLINA": "SC", "INDIANA": "IN", "NEVADA": "NV", "LOUISIANA": "LA", "NORTHERN MARIANA ISLANDS": "MP", "NEBRASKA": "NE", "ARIZONA": "AZ", "WISCONSIN": "WI", "NORTH DAKOTA": "ND", "Armed Forces Europe": "AE", "PENNSYLVANIA": "PA", "OKLAHOMA": "OK", "KENTUCKY": "KY", "RHODE ISLAND": "RI", "DISTRICT OF COLUMBIA": "DC", "ARKANSAS": "AR", "MISSOURI": "MO", "TEXAS": "TX", "MAINE": "ME"}
+
+        return state_to_abbrev[state.upper()]
 
     def _parsePollDates(self, dateText):
         """Find the start and end date of a poll.
