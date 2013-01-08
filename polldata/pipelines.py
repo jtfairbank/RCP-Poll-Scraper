@@ -6,6 +6,7 @@
 from scrapy import signals
 from scrapy.contrib.exporter import CsvItemExporter
 from scrapy.exceptions import DropItem
+from exporters.HouseItemExporter import HouseItemExporter
 import json
 import hashlib
 
@@ -46,8 +47,10 @@ class CsvExportPipeline(object):
     def spider_opened(self, spider):
         latest_polls_file = open('data/' + spider.name + '_latest.csv', 'w')
         self.latest_polls_files[spider] = latest_polls_file
-
-        exporter = CsvItemExporter(latest_polls_file, fields_to_export=spider.fields_to_export)
+        if 'house' in spider.name:
+            exporter = HouseItemExporter(latest_polls_file, fields_to_export=spider.fields_to_export)
+        else:
+            exporter = CsvItemExporter(latest_polls_file, fields_to_export=spider.fields_to_export)
         exporter.start_exporting()
         self.exporters[spider] = exporter
 
@@ -72,7 +75,7 @@ class CsvExportPipeline(object):
         for item in sorteditems:
             self.exporters[spider].export_item(item)
             if 'house' in spider.name:
-                latest_polls_file.write('#'+item['title'])
+                print 'House poll'
         self.exporters[spider].finish_exporting()
 
         latest_polls_file = self.latest_polls_files.pop(spider)
