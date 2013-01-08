@@ -59,7 +59,14 @@ class HouseSpider(CrawlSpider):
             district = 'AL'
         else:
             district = re.findall(r'\d+', state)[0]            
-        state = hxs.select('//*[@id="snapshot"]/h3/text()').extract()[0].split()[0]
+            #finds all digits in the title string, digits correspond to district
+        state = ''
+        if 'NORTH' in title.upper() or 'SOUTH' in title.upper() or 'WEST' in title.upper() or 'RHODE' in title.upper(): 
+            words = hxs.select('//*[@id="snapshot"]/h3/text()').extract()[0].split()
+            state = words[0] + " " + words[1]
+        else:
+            state = hxs.select('//*[@id="snapshot"]/h3/text()').extract()[0].split()[0]
+
         polls = hxs.select('//*[@id="polling-data-full"]/table/tr[not(@class) or @class="isInRcpAvg"]')
 
         for poll in polls:
@@ -82,8 +89,8 @@ class HouseSpider(CrawlSpider):
                 item['ind'] = polldata[ lookup['ind'] ].extract()
             except:
                 item['ind'] = 0
-            item['candidates'] = hxs.select('//*[@id="polling-data-full"]/table/tbody/tr[1]/th[4]/text()').extract()
-            item['candidates'] += hxs.select('//*[@id="polling-data-full"]/table/tbody/tr[1]/th[5]/text()').extract()
+            item['candidates'] = hxs.select('//*[@id="candidates"]/div[1]/p[1]/text()').extract()[0]
+            item['candidates'] += ', ' + hxs.select('//*[@id="candidates"]/div[2]/p[1]/text()').extract()[0]
             items.append(item)
 
         return items

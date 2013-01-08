@@ -74,8 +74,7 @@ class CsvExportPipeline(object):
         sorteditems = sorted(self.newitems[spider], key=lambda item: item['state'])
         for item in sorteditems:
             self.exporters[spider].export_item(item)
-            if 'house' in spider.name:
-                print 'House poll'
+
         self.exporters[spider].finish_exporting()
 
         latest_polls_file = self.latest_polls_files.pop(spider)
