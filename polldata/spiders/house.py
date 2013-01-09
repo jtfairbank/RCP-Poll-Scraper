@@ -21,10 +21,10 @@ class HouseSpider(CrawlSpider):
     rules = (
         Rule(
             SgmlLinkExtractor(
-                allow=(r"epolls/2012/house/[a-z]{2}/[a-z_]+-[0-9]{4}\.html"),
+                allow=(r"epolls/2012/house/[a-z]{2}/[a-z0-9_]+-[0-9]{4}\.html"),
                 # Regex explanation:
                 #     [a-z]{2} - matches a two character state abbreviation
-                #     [a-z]*   - matches a state name and race info
+                #     [a-z0-9_]*   - matches a state name and race info
                 #     [0-9]{4} - matches a 4 number unique webpage identifier
 
                 allow_domains=('realclearpolitics.com',),
@@ -58,10 +58,10 @@ class HouseSpider(CrawlSpider):
         if 'At-Large' in title:
             district = 'AL'
         else:
-            district = re.findall(r'\d+', state)[0]            
+            district = re.findall(r'\d+', title)[0]            
             #finds all digits in the title string, digits correspond to district
         state = ''
-        if 'NORTH' in title.upper() or 'SOUTH' in title.upper() or 'WEST' in title.upper() or 'RHODE' in title.upper(): 
+        if title.split()[0].upper() in ['NORTH','SOUTH', 'NEW', 'WEST', 'RHODE']:
             words = hxs.select('//*[@id="snapshot"]/h3/text()').extract()[0].split()
             state = words[0] + " " + words[1]
         else:
@@ -89,8 +89,9 @@ class HouseSpider(CrawlSpider):
                 item['ind'] = polldata[ lookup['ind'] ].extract()
             except:
                 item['ind'] = 0
+
             item['candidates'] = hxs.select('//*[@id="candidates"]/div[1]/p[1]/text()').extract()[0]
-            item['candidates'] += ', ' + hxs.select('//*[@id="candidates"]/div[2]/p[1]/text()').extract()[0]
+            item['candidates'] += ' vs. ' + hxs.select('//*[@id="candidates"]/div[2]/p[1]/text()').extract()[0]
             items.append(item)
 
         return items

@@ -18,6 +18,7 @@ class PresPollItem(Item):
     ind     = Field()
 
 class HousePollItem(Item):
+    # title and candidates field are used to format output
     state = Field()
     title   = Field()
     candidates = Field()
